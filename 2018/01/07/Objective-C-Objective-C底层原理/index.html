@@ -88,7 +88,7 @@
 <meta property="og:description" content="Objective-C对象模型定义及isa指针我们都知道OC是一门动态性语言，这种动态性的核心是objc提供的oc运行时，比如objc_msgSend就是一个核心函数，每次使用[object message]语法都会使用它。 OC是一门面向对象的编程语言，每个对象都是一个类的实例，在OC中，每个对象都有一个名为isa的指针，只想该对象的类。每一个类描述了一系列它的实例的特点，包括成员变量的列表、成">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fgy1fn8fhmuc6cj20hs0imdgh">
-<meta property="og:updated_time" content="2018-01-08T07:16:41.972Z">
+<meta property="og:updated_time" content="2018-01-08T07:19:57.245Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="[Objective-C]Objective-C底层原理">
 <meta name="twitter:description" content="Objective-C对象模型定义及isa指针我们都知道OC是一门动态性语言，这种动态性的核心是objc提供的oc运行时，比如objc_msgSend就是一个核心函数，每次使用[object message]语法都会使用它。 OC是一门面向对象的编程语言，每个对象都是一个类的实例，在OC中，每个对象都有一个名为isa的指针，只想该对象的类。每一个类描述了一系列它的实例的特点，包括成员变量的列表、成">
@@ -369,7 +369,7 @@
 <p>OC是一门面向对象的编程语言，每个对象都是一个类的实例，在OC中，每个对象都有一个名为isa的指针，只想该对象的类。每一个类描述了一系列它的实例的特点，包括成员变量的列表、成员函数的列表等。每个对象都可以接收到消息，而对象能够接收到的消息列表保存在它所对应的类中。</p>
 <a id="more"></a>
 <p><em>注意：</em><br><em>每个对象都有一个isa指针，这个指针指向的是它的类。类中包括成员变量，成员函数等。</em></p>
-<p>根据面向对象的原则，所有事物皆是对象。所以在OC中，每个类实际上也是一个对象，每个类也有一个isa指针，每个类也可以接受消息，例如<a href="">NSObject alloc</a>，就是向<code>NSObject</code>类发送一个名为<code>alloc</code>的消息。<br>那么我们前面说到对象的isa指针会指向它的类，那类中的isa指针会指向什么呢？<strong>因为类也是对象，所以它也必须是另一个类的实例，这个类就是元类（metaclass），所以isa指针指向的是它的元类。元类保存了类的方法列表。当一个类的方法被调用时，元类会首先查找它本身是否有该类方法的实现，如果没有，则该元类会向它的父类查找该方法，这样可以一直找到继承链的头。</strong></p>
+<p>根据面向对象的原则，所有事物皆是对象。所以在OC中，每个类实际上也是一个对象，每个类也有一个isa指针，每个类也可以接受消息，例如[NSObject alloc]，就是向<code>NSObject</code>类发送一个名为<code>alloc</code>的消息。<br>那么我们前面说到对象的isa指针会指向它的类，那类中的isa指针会指向什么呢？<strong>因为类也是对象，所以它也必须是另一个类的实例，这个类就是元类（metaclass），所以isa指针指向的是它的元类。元类保存了类的方法列表。当一个类的方法被调用时，元类会首先查找它本身是否有该类方法的实现，如果没有，则该元类会向它的父类查找该方法，这样可以一直找到继承链的头。</strong></p>
 <p>如上面所说，元类也是一个对象，那么元类的isa指针指向谁呢？_OC为了设计上的完整，所有元类的isa指针都会指向一个根元类（root metaclass），根元类的isa指针指向自己，这样就形成了一个闭环。上面说到，一个对象能够接受的消息列表是保存在它所对应的类中的，但在实际编程中，我们几乎不会遇到向元类发消息的情况。</p>
 <h3 id="继承关系"><a href="#继承关系" class="headerlink" title="继承关系"></a>继承关系</h3><p>由于类方法的定义是保存在元类中，而方法的调用规则是，如果该类没有一个方法实现，则向它的父类继续查找。所以，为了保证父类的类方法在子类中可以被调用，所有子类的元类都会继承父类的元类，简单来说就是类对象和元类对象有着同样的继承关系。<br>如图：<br><img src="https://ws1.sinaimg.cn/large/b68ce00fgy1fn8fhmuc6cj20hs0imdgh" alt="https://ws1.sinaimg.cn/large/b68ce00fgy1fn8fhmuc6cj20hs0imdgh"></p>
 <h2 id="objc-msgSend"><a href="#objc-msgSend" class="headerlink" title="objc_msgSend"></a>objc_msgSend</h2><p>OC运行时的核心就在于消息分派器<code>objc_msgSend</code>，消息分派器把选择器映射为函数指针，并调用被引用的函数。要想理解<code>objc_msgSend</code>的原理，先来理解一下<code>NSInvocation</code>这个类。</p>
