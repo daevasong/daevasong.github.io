@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.3" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="响应链,Objective-C,hit-test," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="在开发中我们经常会用到事件。iOS的事件有好几种：Touch Events（触摸事件），Motion Events（运动事件，比如重力感应等偏向硬件的事件）和Remote Events（远程事件，比如耳机上的按键控制手机）。最常见的就是Touch Events，今天主要讲触摸事件的响应链传递。">
+<meta name="keywords" content="响应链,Objective-C,hit-test">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[Objective-C]hit-test响应链原理">
+<meta property="og:url" content="http://yoursite.com/2018/01/25/Objective-C-hit-test响应链原理/index.html">
+<meta property="og:site_name" content="Daeva&#39;s Blog">
+<meta property="og:description" content="在开发中我们经常会用到事件。iOS的事件有好几种：Touch Events（触摸事件），Motion Events（运动事件，比如重力感应等偏向硬件的事件）和Remote Events（远程事件，比如耳机上的按键控制手机）。最常见的就是Touch Events，今天主要讲触摸事件的响应链传递。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fly1fnt84dqm85j21bm0k0gsq">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fly1fnyq45o8t2j213l0lhadm">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fly1fnyy6bfmytj20yy0gpjt8">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fly1fnyy8891u4j20yy0gp0vp">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/b68ce00fgy1fouzacav2yj209u08r752">
+<meta property="og:updated_time" content="2018-02-27T12:31:57.410Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[Objective-C]hit-test响应链原理">
+<meta name="twitter:description" content="在开发中我们经常会用到事件。iOS的事件有好几种：Touch Events（触摸事件），Motion Events（运动事件，比如重力感应等偏向硬件的事件）和Remote Events（远程事件，比如耳机上的按键控制手机）。最常见的就是Touch Events，今天主要讲触摸事件的响应链传递。">
+<meta name="twitter:image" content="https://ws1.sinaimg.cn/large/b68ce00fly1fnt84dqm85j21bm0k0gsq">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/01/25/Objective-C-hit-test响应链原理/"/>
+
+
+
+
+
+  <title>[Objective-C]hit-test响应链原理 | Daeva's Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Daeva's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Code is poetry</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/01/25/Objective-C-hit-test响应链原理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Daeva Song">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Daeva's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">[Objective-C]hit-test响应链原理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-01-25T17:07:10+08:00">
+                2018-01-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Objective-C/" itemprop="url" rel="index">
+                    <span itemprop="name">Objective-C</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/01/25/Objective-C-hit-test响应链原理/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/01/25/Objective-C-hit-test响应链原理/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote class="blockquote-center"><p>在开发中我们经常会用到事件。iOS的事件有好几种：<code>Touch Events</code>（触摸事件），<code>Motion Events</code>（运动事件，比如重力感应等偏向硬件的事件）和<code>Remote Events</code>（远程事件，比如耳机上的按键控制手机）。最常见的就是<code>Touch Events</code>，今天主要讲触摸事件的响应链传递。</p>
+</blockquote> 
+<a id="more"></a>
+<h2 id="响应链"><a href="#响应链" class="headerlink" title="响应链"></a>响应链</h2><h3 id="响应链的构建"><a href="#响应链的构建" class="headerlink" title="响应链的构建"></a>响应链的构建</h3><p>无论是哪种事件，其传递和响应都和响应链息息相关，那么响应链到底是什么？我们看一下UIResponder类的几个属性和方法：<br><img src="https://ws1.sinaimg.cn/large/b68ce00fly1fnt84dqm85j21bm0k0gsq" alt=""><br><code>UIResponder</code>是所有可以响应事件的基类，包括<code>UIView</code>、<code>UIViewController</code>和<code>UIApplication</code>。所以说，<code>UIView</code>和<code>UIViewController</code>都是作为响应事件的载体。</p>
+<p>那么响应链和<code>UIResponder</code>有什么关系呢？事件响应链的形成和事件的响应和传递，<code>UIResponder</code>都帮我们做了很多事情。我们的App中，所有的视图都是按照结构组成的，即树状层次结构，每个View都有自己的superView，包括controller的self.view。当一个view被add到superView的时候，它的nextResponder属性就会指向它的superView，当controller初始化的时候，它的self.view的nextResponder就会被指向所在的controller，而controller的nextResponder会被指向self.view的superView。<strong>整个App通过nextResponder串成了一条链，也就是我们所说的响应链。响应链是一条虚拟的链，没有一个专门的对象来存储这样的一条链，而是通过UIResponder串联起来的。</strong>如图：<br><img src="https://ws1.sinaimg.cn/large/b68ce00fly1fnyq45o8t2j213l0lhadm" alt=""></p>
+<h2 id="Hit-testing-View"><a href="#Hit-testing-View" class="headerlink" title="Hit-testing View"></a>Hit-testing View</h2><p>有了事件响应链，接下来的事情就是寻找事件的具体响应者，响应者被称为：Hit-Testing View，寻找这个View的过程就是hit-test。</p>
+<p>hit-test可以理解为一个探测器，通过它我们可以判断手指是否点击在某个视图上面，换句话说，就是通过hit-test可以找到手指点击到的处于屏幕最前面的那个View。</p>
+<p>UIView中有如下两个方法：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">UIView</span> *)hitTest:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event; </span><br><span class="line">- (<span class="built_in">BOOL</span>)pointInside:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event;</span><br></pre></td></tr></table></figure></p>
+<p>手指接触屏幕，UIApplication接受到手指的事件之后，就会调用UIWindow的hitTest:withEvent:方法，看看当前点击的点是不是在window内。如果是，则继续调用subView的hitTest:withEvent方法，直到找到最后需要的View。调用结束后并确定了hitTest-view后，这个view和view上面的手势，会和一个UITouch对象关联起来，这个UITouch对象会作为事件传递的参数之一，我们可以看到UITouch头文件里面有一个view和gestureRecognizer的属性，就是hitTest-view和它的手势。</p>
+<p>那么响应链是怎么工作的呢？hitTest是用递归的方法从view层级的根节点开始遍历：<br><img src="https://ws1.sinaimg.cn/large/b68ce00fly1fnyy6bfmytj20yy0gpjt8" alt=""><br>如图所示：UIWindow有一个MianVIew，MainView里面有三个subView：view A、view B、view C，他们各自有两个subView，他们层级关系是：view A在最下面，view B中间，view C最上(也就是addSubview的顺序，越晚add进去越在上面)，其中view A和view B有一部分重叠。</p>
+<p>如果手指在view B.1和view A.2重叠的上面点击，按照上面说的递归方式，顺序如下：<br><img src="https://ws1.sinaimg.cn/large/b68ce00fly1fnyy8891u4j20yy0gp0vp" alt=""><br>递归是向界面的根节点UIWindow发送hitTest:withEvent：开始的，从这个消息返回的是一个UIView，也就是手指当前位置最前面的那个view。当向UIWindow发送hitTest:withEvent:消息的时候，hitTest:withEvent里面所做的事，就是判断当前点击位置是否在window里面。如果在，则遍历window的subview然后依次对subview发送hitTest:withEvent:消息。如果当前的point没在view上面，那么这个view的subview也就不会被遍历了。当事件遍历到了view B.1,发现point在B.1里面，并且view B.1没有subview,那它就是我们要找的hitTest view了。找到之后会一路返回到根节点，而view B下面的view A也就不会被遍历了。</p>
+<p>hitTest里面是有判断当前view是否支持点击事件，比如<code>userInteractionEnabled</code>、<code>hidden</code>、<code>alpha</code>等属性，都会影响一个view是否可以响应事件。<strong>我们留意到还有一个pointInside:withEvent:方法，这个方法跟hitTest:withEvent:一样是UIView的方法，通过它可以判断当前point是否在view上。</strong>如果这些条件都满足了，则可以继续遍历，代码如下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">-(<span class="built_in">UIView</span> *)hitTest:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">self</span>.isUserInteractionEnabled || <span class="keyword">self</span>.isHidden || <span class="keyword">self</span>.alpha &lt;= <span class="number">0.01</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> ([<span class="keyword">self</span> pointInside:point withEvent:event]) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="built_in">UIView</span> *subview <span class="keyword">in</span> [<span class="keyword">self</span>.subviews reverseObjectEnumerator]) &#123;</span><br><span class="line">            <span class="built_in">CGPoint</span> convertedPoint = [subview convertPoint:point fromView:<span class="keyword">self</span>];</span><br><span class="line">            <span class="built_in">UIView</span> *hittestView = [subview hitTest:convertedPoint withEvent:event];</span><br><span class="line">            <span class="keyword">if</span> (hittestView) &#123;</span><br><span class="line">                <span class="keyword">return</span> hittestView;<span class="comment">//找到hitTest-view 返回</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">self</span>;<span class="comment">//找不到hitTestview 返回自己</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span>;<span class="comment">//不符合事件触发条件 返回空</span></span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line">- (<span class="built_in">BOOL</span>)pointInside:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">CGRectContainsPoint</span>(<span class="keyword">self</span>.bounds, point);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Hit-test的应用"><a href="#Hit-test的应用" class="headerlink" title="Hit-test的应用"></a>Hit-test的应用</h2><h3 id="扩大view的点击区域"><a href="#扩大view的点击区域" class="headerlink" title="扩大view的点击区域"></a>扩大view的点击区域</h3><p>可以通过重写hitTest:withEvent:方法来解决扩大view响应范围的问题。hitTest:withEvent方法返回的就是可以响应事件的view，如果我们在button的子类中重写它，在方法里判断如果point在button的frame之外（比如10个像素），就返回button自己。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">-(<span class="built_in">UIView</span> *)hitTest:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">self</span>.isUserInteractionEnabled || <span class="keyword">self</span>.isHidden || <span class="keyword">self</span>.alpha &lt;= <span class="number">0.01</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">CGRect</span> touchRect = <span class="built_in">CGRectInset</span>(<span class="keyword">self</span>.bounds, <span class="number">-10</span>, <span class="number">-10</span>);</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">CGRectContainsPoint</span>(touchRect, point)) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="built_in">UIView</span> *subview <span class="keyword">in</span> [<span class="keyword">self</span>.subviews reverseObjectEnumerator]) &#123;</span><br><span class="line">            <span class="built_in">CGPoint</span> convertedPoint = [subview convertPoint:point fromView:<span class="keyword">self</span>];</span><br><span class="line">            <span class="built_in">UIView</span> *hitTestView = [subview hitTest:convertedPoint withEvent:event];</span><br><span class="line">            <span class="keyword">if</span> (hitTestView) &#123;</span><br><span class="line">                <span class="keyword">return</span> hitTestView;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">self</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span>;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="将事件传递给兄弟View"><a href="#将事件传递给兄弟View" class="headerlink" title="将事件传递给兄弟View"></a>将事件传递给兄弟View</h3><p>如上面第一张图，如果此时想要view A响应事件而不是B（即使点击在重叠部分），我们需要重写B的hitTest来解决这个问题，因为hitTest方法是返回一个hitTestView，我们直接返回一个nil就可以。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">-(<span class="built_in">UIView</span> *)hitTest:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event</span><br><span class="line">        <span class="built_in">UIView</span> *hitTestView = [<span class="keyword">super</span> hitTest:point withEvent:event];</span><br><span class="line">        <span class="keyword">if</span> (hitTestView == <span class="keyword">self</span>) &#123;</span><br><span class="line">            hitTestView = <span class="literal">nil</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> hitTestView;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="将事件传递给subview"><a href="#将事件传递给subview" class="headerlink" title="将事件传递给subview"></a>将事件传递给subview</h3><p><img src="https://ws1.sinaimg.cn/large/b68ce00fgy1fouzacav2yj209u08r752" alt=""><br>如上图，蓝色的scrollView设置pagingEnabled使得image停止滚动后会固定在居中的位置，如果在scrollView的左边或者右边活动，发现scrollView是无法滚动的，原因就是hitTest里面没有满足pointInSide这个条件，scrollView的bounds只有蓝色的区域，这个时候重写UIView的hitTest:withEvent;，然后返回scrollView即可解决。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">-(<span class="built_in">UIView</span> *)hitTest:(<span class="built_in">CGPoint</span>)point withEvent:(<span class="built_in">UIEvent</span> *)event&#123;</span><br><span class="line"> <span class="built_in">UIView</span> *hitTestView = [<span class="keyword">super</span> hitTest:point withEvent:event];</span><br><span class="line"><span class="keyword">if</span> (hitTestView) &#123;</span><br><span class="line"> hitTestView = <span class="keyword">self</span>.scrollView;</span><br><span class="line"> &#125;   </span><br><span class="line"> <span class="keyword">return</span> hitTestView;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/响应链/" rel="tag"># 响应链</a>
+          
+            <a href="/tags/Objective-C/" rel="tag"># Objective-C</a>
+          
+            <a href="/tags/hit-test/" rel="tag"># hit-test</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/01/10/Objective-C-为第三方类的分类添加前缀/" rel="next" title="[Objective-C]为第三方类的分类添加前缀">
+                <i class="fa fa-chevron-left"></i> [Objective-C]为第三方类的分类添加前缀
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Daeva Song</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/daevasong" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://weibo.com/3062685711" target="_blank" title="微博">
+                    
+                      <i class="fa fa-fw fa-weibo"></i>微博</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="http://www.jianshu.com/u/86976c22b3ca" target="_blank" title="简书">
+                    
+                      <i class="fa fa-fw fa-globe"></i>简书</a>
+                </span>
+              
+            
+          </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#响应链"><span class="nav-number">1.</span> <span class="nav-text">响应链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#响应链的构建"><span class="nav-number">1.1.</span> <span class="nav-text">响应链的构建</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hit-testing-View"><span class="nav-number">2.</span> <span class="nav-text">Hit-testing View</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hit-test的应用"><span class="nav-number">3.</span> <span class="nav-text">Hit-test的应用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#扩大view的点击区域"><span class="nav-number">3.1.</span> <span class="nav-text">扩大view的点击区域</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#将事件传递给兄弟View"><span class="nav-number">3.2.</span> <span class="nav-text">将事件传递给兄弟View</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#将事件传递给subview"><span class="nav-number">3.3.</span> <span class="nav-text">将事件传递给subview</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Daeva Song</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Muse</a> v5.1.3</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/three.min.js"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/canvas_lines.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'http://yoursite.com/2018/01/25/Objective-C-hit-test响应链原理/';
+          this.page.identifier = '2018/01/25/Objective-C-hit-test响应链原理/';
+          this.page.title = '[Objective-C]hit-test响应链原理';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
